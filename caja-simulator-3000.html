@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAJA SIMULATOR 3000</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Boogaloo&family=Fredoka+One&family=Russo+One&display=swap');
+
+  :root {
+    --common: #a0aec0;
+    --rare: #4299e1;
+    --epic: #9f7aea;
+    --legendary: #ecc94b;
+    --mythic: #fc8181;
+    --divine: #76e4f7;
+    --skibidi: #f6e05e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0a0a1a;
+    font-family: 'Fredoka One', cursive;
+    min-height: 100vh;
+    overflow-x: hidden;
+    color: #fff;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(120,40,200,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(0,200,255,0.1) 0%, transparent 50%);
+  }
+
+  /* HEADER */
+  #header {
+    text-align: center;
+    padding: 20px 10px 0;
+    position: relative;
+    z-index: 10;
+  }
+  #header h1 {
+    font-family: 'Russo One', sans-serif;
+    font-size: clamp(2rem, 6vw, 4.5rem);
+    background: linear-gradient(90deg, #f6e05e, #fc8181, #76e4f7, #f6e05e);
+    background-size: 300% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradShift 2s linear infinite;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(246,224,94,0.5));
+  }
+  @keyframes gradShift {
+    0% { background-position: 0% center; }
+    100% { background-position: 300% center; }
+  }
+  #header p {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.95rem;
+    margin-top: 4px;
+    font-family: 'Boogaloo', cursive;
+    letter-spacing: 2px;
+  }
+
+  /* STATS BAR */
+  #stats {
+    display: flex;
+    justify-content: center;
+    gap: clamp(10px, 3vw, 30px);
+    flex-wrap: wrap;
+    padding: 16px 20px;
+    z-index: 10;
+    position: relative;
+  }
+  .stat-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 10px 20px;
+    text-align: center;
+    min-width: 110px;
+    backdrop-filter: blur(10px);
+  }
+  .stat-card .label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: 'Boogaloo', cursive;
+  }
+  .stat-card .value {
+    font-size: 1.4rem;
+    font-family: 'Russo One', sans-serif;
+    color: #fff;
+    transition: all 0.2s;
+  }
+  .stat-card .value.bump {
+    transform: scale(1.3);
+    color: #f6e05e;
+  }
+
+  /* MAIN AREA */
+  #main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding: 10px 20px 40px;
+    position: relative;
+    z-index: 5;
+  }
+
+  /* SHOP / UNLOCK */
+  #shop {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 800px;
+  }
+  .shop-btn {
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.85rem;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .shop-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.12);
+  }
+  .shop-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .shop-btn .cost {
+    font-size: 0.7rem;
+    color: #f6e05e;
+    display: block;
+  }
+
+  /* BOX SELECTOR */
+  #box-selector {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 800px;
+  }
+  .box-opt {
+    border-radius: 14px;
+    padding: 10px 18px;
+    cursor: pointer;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.9rem;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .box-opt.active { transform: scale(1.08); }
+  .box-opt:hover:not(.locked) { transform: scale(1.05); }
+  .box-opt.locked { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
+  .box-opt .prob { font-size: 0.65rem; opacity: 0.7; display: block; }
+
+  /* BOX TYPES COLORS */
+  .t-common { background: rgba(160,174,192,0.15); border-color: var(--common); color: var(--common); }
+  .t-rare { background: rgba(66,153,225,0.15); border-color: var(--rare); color: var(--rare); }
+  .t-epic { background: rgba(159,122,234,0.15); border-color: var(--epic); color: var(--epic); }
+  .t-legendary { background: rgba(236,201,75,0.15); border-color: var(--legendary); color: var(--legendary); }
+  .t-mythic { background: rgba(252,129,129,0.15); border-color: var(--mythic); color: var(--mythic); }
+  .t-divine { background: rgba(118,228,247,0.15); border-color: var(--divine); color: var(--divine); }
+  .t-skibidi { background: linear-gradient(135deg,rgba(246,224,94,0.2),rgba(252,129,129,0.2),rgba(118,228,247,0.2)); border-color: #fff; color: #fff; }
+
+  /* OPEN BUTTON */
+  #open-btn {
+    position: relative;
+    font-family: 'Russo One', sans-serif;
+    font-size: clamp(1.2rem, 4vw, 2rem);
+    padding: 18px 60px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, #6b46c1, #d53f8c, #ed8936);
+    color: #fff;
+    box-shadow: 0 0 30px rgba(213,63,140,0.5), 0 8px 30px rgba(0,0,0,0.4);
+    transition: all 0.15s;
+    overflow: hidden;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  #open-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.4s;
+  }
+  #open-btn:hover::before { transform: translateX(100%); }
+  #open-btn:hover { transform: scale(1.05); box-shadow: 0 0 50px rgba(213,63,140,0.8), 0 12px 40px rgba(0,0,0,0.5); }
+  #open-btn:active { transform: scale(0.97); }
+  #open-btn.exploding { animation: btnExplode 0.4s ease; }
+  @keyframes btnExplode {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.15) rotate(-2deg); }
+    60% { transform: scale(0.95) rotate(1deg); }
+    100% { transform: scale(1); }
+  }
+
+  /* RESULT DISPLAY */
+  #result-area {
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+  }
+  #result-box {
+    font-size: clamp(3rem, 12vw, 8rem);
+    line-height: 1;
+    animation: floatBox 3s ease-in-out infinite;
+    cursor: default;
+    filter: drop-shadow(0 0 20px currentColor);
+    transition: transform 0.1s;
+  }
+  @keyframes floatBox { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-12px) rotate(3deg)} }
+  #result-box.shake { animation: shake 0.4s ease; }
+  @keyframes shake {
+    0%,100%{transform:rotate(-3deg)}
+    20%{transform:translateX(-8px) rotate(-8deg)}
+    40%{transform:translateX(8px) rotate(8deg) scale(1.15)}
+    60%{transform:translateX(-5px) rotate(-5deg) scale(1.2)}
+    80%{transform:translateX(5px) rotate(5deg) scale(1.1)}
+  }
+
+  #result-msg {
+    font-family: 'Boogaloo', cursive;
+    font-size: clamp(1.5rem, 5vw, 3rem);
+    text-align: center;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    text-shadow: 0 0 20px currentColor;
+    max-width: 90vw;
+  }
+  #result-msg.show { opacity: 1; transform: translateY(0); }
+  #result-pts {
+    font-family: 'Russo One', sans-serif;
+    font-size: clamp(1.2rem, 4vw, 2rem);
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.3s 0.1s;
+    text-align: center;
+  }
+  #result-pts.show { opacity: 1; transform: scale(1); }
+
+  /* HISTORY */
+  #history-container {
+    width: 100%;
+    max-width: 680px;
+  }
+  #history-container h3 {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 10px;
+    font-family: 'Boogaloo', cursive;
+  }
+  #history {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    max-height: 120px;
+    overflow: hidden;
+  }
+  .hist-item {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    font-family: 'Boogaloo', cursive;
+    animation: popIn 0.2s ease;
+    white-space: nowrap;
+  }
+  @keyframes popIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+
+  /* CONFETTI CANVAS */
+  #confetti-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* BIG WIN OVERLAY */
+  #big-win {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 9998;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    backdrop-filter: blur(8px);
+  }
+  #big-win.active { display: flex; }
+  #big-win-emoji {
+    font-size: 6rem;
+    animation: bigBounce 0.5s ease infinite alternate;
+  }
+  @keyframes bigBounce { from{transform:scale(1)} to{transform:scale(1.2) rotate(5deg)} }
+  #big-win-title {
+    font-family: 'Russo One', sans-serif;
+    font-size: clamp(2rem, 8vw, 5rem);
+    text-align: center;
+    animation: rainbow 1s linear infinite;
+  }
+  @keyframes rainbow {
+    0%{color:#f6e05e} 25%{color:#fc8181} 50%{color:#76e4f7} 75%{color:#9f7aea} 100%{color:#f6e05e}
+  }
+  #big-win-pts {
+    font-family: 'Boogaloo', cursive;
+    font-size: clamp(1.5rem, 5vw, 3rem);
+    color: rgba(255,255,255,0.8);
+  }
+  #big-win-close {
+    margin-top: 10px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 14px;
+    padding: 10px 30px;
+    color: #fff;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #big-win-close:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
+
+  /* FLOATING NUMBERS */
+  .float-num {
+    position: fixed;
+    font-family: 'Russo One', sans-serif;
+    font-size: 1.6rem;
+    color: #f6e05e;
+    pointer-events: none;
+    z-index: 997;
+    text-shadow: 0 0 10px rgba(246,224,94,0.8);
+    animation: floatUp 1.2s ease forwards;
+  }
+  @keyframes floatUp {
+    0%{opacity:1;transform:translateY(0) scale(1)}
+    100%{opacity:0;transform:translateY(-100px) scale(0.5)}
+  }
+
+  /* GLOW PULSE on active box */
+  .box-opt.active.t-legendary { box-shadow: 0 0 20px var(--legendary); }
+  .box-opt.active.t-mythic { box-shadow: 0 0 20px var(--mythic); }
+  .box-opt.active.t-divine { box-shadow: 0 0 20px var(--divine); }
+  .box-opt.active.t-skibidi { box-shadow: 0 0 30px #fff, 0 0 60px #f6e05e; }
+
+  /* MULTI OPEN */
+  #multi-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .multi-btn {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 6px 14px;
+    color: #fff;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .multi-btn:hover:not(:disabled) { background: rgba(255,255,255,0.15); transform: scale(1.05); }
+  .multi-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    filter: grayscale(0.6);
+  }
+  .multi-btn .req {
+    display: block;
+    font-size: 0.6rem;
+    color: #f6e05e;
+    opacity: 0.8;
+    font-family: 'Boogaloo', cursive;
+    line-height: 1;
+    margin-top: 1px;
+  }
+  .multi-btn.flash {
+    animation: multiBtnFlash 0.3s ease;
+  }
+  @keyframes multiBtnFlash {
+    0%{transform:scale(1)} 40%{transform:scale(0.9)} 100%{transform:scale(1)}
+  }
+
+  /* UNLOCK NOTIFICATION */
+  #unlock-notif {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.85);
+    border-radius: 16px;
+    padding: 14px 22px;
+    z-index: 9997;
+    transform: translateX(200%);
+    transition: transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+    border: 1px solid rgba(255,255,255,0.2);
+    max-width: 260px;
+    backdrop-filter: blur(10px);
+  }
+  #unlock-notif.show { transform: translateX(0); }
+  #unlock-notif .un-title { font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-family: 'Boogaloo', cursive; }
+  #unlock-notif .un-body { font-family: 'Fredoka One', cursive; font-size: 1rem; }
+
+  /* BEST ROLL BANNER */
+  #best-banner {
+    font-family: 'Boogaloo', cursive;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.35);
+    text-align: center;
+  }
+  #best-banner span { color: #f6e05e; font-family: 'Russo One', sans-serif; }
+</style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div id="big-win">
+  <div id="big-win-emoji">🎁</div>
+  <div id="big-win-title">¡¡¡JACKPOT!!!</div>
+  <div id="big-win-pts"></div>
+  <button id="big-win-close">CERRAR Y SEGUIR APOSTANDO</button>
+</div>
+
+<div id="unlock-notif">
+  <div class="un-title">🔓 ¡DESBLOQUEADO!</div>
+  <div class="un-body" id="unlock-body"></div>
+</div>
+
+<div id="header">
+  <h1>📦 CAJA SIMULATOR 3000</h1>
+  <p>abre cajas · hazte rico · pierde la cabeza</p>
+</div>
+
+<div id="stats">
+  <div class="stat-card">
+    <div class="label">Total Puntos</div>
+    <div class="value" id="stat-pts">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Cajas Abiertas</div>
+    <div class="value" id="stat-boxes">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Mejor Tirada</div>
+    <div class="value" id="stat-best">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Legendarias</div>
+    <div class="value" id="stat-legend">0</div>
+  </div>
+</div>
+
+<div id="main">
+
+  <!-- BOX TYPE SELECTOR -->
+  <div id="box-selector"></div>
+
+  <!-- RESULT -->
+  <div id="result-area">
+    <div id="result-box">📦</div>
+    <div id="result-msg"></div>
+    <div id="result-pts"></div>
+  </div>
+
+  <div id="best-banner">Mejor racha: <span id="streak-count">0</span> cajas seguidas sobre 10k pts</div>
+
+  <!-- OPEN BUTTON -->
+  <button id="open-btn">🎁 ¡ABRIR CAJA!</button>
+
+  <!-- MULTI OPEN -->
+  <div id="multi-row">
+    <button class="multi-btn" data-n="2"   data-cost="1000">x2<span class="req">🪙 1.000 pts</span></button>
+    <button class="multi-btn" data-n="10"  data-cost="10000">x10<span class="req">🪙 10.000 pts</span></button>
+    <button class="multi-btn" data-n="50"  data-cost="100000">x50<span class="req">🪙 100.000 pts</span></button>
+    <button class="multi-btn" data-n="100" data-cost="1000000">x100<span class="req">🪙 1.000.000 pts</span></button>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="history-container">
+    <h3>Últimas tiradas</h3>
+    <div id="history"></div>
+  </div>
+
+</div>
+
+<script>
+// ─── AUDIO CONTEXT ───────────────────────────────────────────────
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+function resumeAC() { if(AC.state==='suspended') AC.resume(); }
+
+function playTone(freq, type='sine', dur=0.15, gain=0.3, delay=0) {
+  resumeAC();
+  const o = AC.createOscillator();
+  const g = AC.createGain();
+  o.connect(g); g.connect(AC.destination);
+  o.type = type;
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0, AC.currentTime + delay);
+  g.gain.linearRampToValueAtTime(gain, AC.currentTime + delay + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + delay + dur);
+  o.start(AC.currentTime + delay);
+  o.stop(AC.currentTime + delay + dur + 0.05);
+}
+
+function playCommonSound() {
+  playTone(440, 'sine', 0.1, 0.2);
+  playTone(550, 'sine', 0.1, 0.15, 0.05);
+}
+function playRareSound() {
+  playTone(523,'triangle',0.15,0.3);
+  playTone(659,'triangle',0.15,0.25,0.07);
+  playTone(784,'triangle',0.15,0.2,0.14);
+}
+function playEpicSound() {
+  [261,329,392,523].forEach((f,i)=>playTone(f,'sawtooth',0.15,0.25,i*0.06));
+}
+function playLegendarySound() {
+  [392,523,659,784,1046].forEach((f,i)=>playTone(f,'triangle',0.2,0.35,i*0.07));
+  setTimeout(()=>playTone(1568,'sine',0.4,0.4),400);
+}
+function playMythicSound() {
+  for(let i=0;i<8;i++) playTone(200+i*150,'square',0.12,0.3,i*0.05);
+}
+function playDivineSound() {
+  const notes=[523,659,784,1046,1318,1568];
+  notes.forEach((f,i)=>{ playTone(f,'sine',0.25,0.4,i*0.06); playTone(f*1.01,'sine',0.25,0.3,i*0.06); });
+}
+function playSkibidiSound() {
+  const bass=[80,100,80,120,80];
+  bass.forEach((f,i)=>playTone(f,'sawtooth',0.15,0.5,i*0.08));
+  [1046,1318,1568,2093,1568,1318,1046].forEach((f,i)=>playTone(f,'sine',0.1,0.4,0.5+i*0.07));
+}
+
+// ─── BOX TYPES ───────────────────────────────────────────────────
+// dropChance: probabilidad de dropear la caja del siguiente tier (0 = no dropea)
+const BOXES = [
+  {
+    id:'common', name:'Común', emoji:'📦', tier:'common', cls:'t-common',
+    minPts:50, maxPts:100,
+    dropChance: 0.20, // 20% caja rara
+    messages:['Meh.','Algo es algo.','Una cajita del montón.','Ni fu ni fa.','Típico.'],
+    sound: playCommonSound, bigWin: false
+  },
+  {
+    id:'rare', name:'Rara', emoji:'💎', tier:'rare', cls:'t-rare',
+    minPts:150, maxPts:200,
+    dropChance: 0.25, // 25% caja épica
+    messages:['¡Ooh, no está mal!','¡Algo raro!','Mejor que lo anterior.','¡Un poco de suerte!'],
+    sound: playRareSound, bigWin: false
+  },
+  {
+    id:'epic', name:'Épica', emoji:'🌟', tier:'epic', cls:'t-epic',
+    minPts:300, maxPts:500,
+    dropChance: 0.07, // 7% caja legendaria
+    messages:['¡ÉPICO!','¡No me lo creo!','¡Esto se pone bueno!','¡EL PODER!'],
+    sound: playEpicSound, bigWin: false
+  },
+  {
+    id:'legendary', name:'Legendaria', emoji:'⚡', tier:'legendary', cls:'t-legendary',
+    minPts:1000, maxPts:2000,
+    dropChance: 0.03, // 3% caja mítica
+    messages:['¡¡LEGENDARIA!!','¡OMG!','¡ESTO ES UN ESCÁNDALO!','¡LA GENTE FLIPANDO!'],
+    sound: playLegendarySound, bigWin: false
+  },
+  {
+    id:'mythic', name:'Mítica', emoji:'🔥', tier:'mythic', cls:'t-mythic',
+    minPts:5000, maxPts:10000,
+    dropChance: 0.13, // 13% caja divina
+    messages:['¡¡¡MÍTICA!!!','¡¡¡DIOS MIO!!!','¡¡TE QUEDASTE SIN PALABRAS!!','¡¡LLAMA A TU MADRE!!'],
+    sound: playMythicSound, bigWin: true
+  },
+  {
+    id:'divine', name:'Divina', emoji:'✨', tier:'divine', cls:'t-divine',
+    minPts:10000, maxPts:15000,
+    dropChance: 0.008, // 0.8% caja skibidi
+    messages:['✨¡¡DIVINA!!✨','¡¡LOS DIOSES TE SONRÍEN!!','¡¡EL UNIVERSO TE ELIGIÓ!!','¡¡ERES UN ELEGIDO!!'],
+    sound: playDivineSound, bigWin: true
+  },
+  {
+    id:'skibidi', name:'Skibidi Ultra Pro Max', emoji:'💀', tier:'skibidi', cls:'t-skibidi',
+    minPts:30000, maxPts:50000,
+    dropChance: 0, // no dropea nada
+    messages:['💀 SKIBIDI RIZZ 💀','¡¡¡TE TOCÓ LA CAJA DEL SIGLO!!!','¡¡GYATT!! ¡¡SIGMA!!','¡¡NO CAP FR FR!!','¡¡¡JACKPOT ULTRA SIGMA!!!'],
+    sound: playSkibidiSound, bigWin: true
+  }
+];
+
+// ─── STATE ───────────────────────────────────────────────────────
+let state = {
+  points: 0,
+  boxes: 0,
+  best: 0,
+  legendaryCount: 0,
+  streak: 0,
+  selectedBox: 0,
+  // inventario: cuántas cajas tienes de cada rareza (índice = índice de BOXES)
+  inv: [Infinity, 0, 0, 0, 0, 0, 0],
+  history: []
+};
+
+// ─── DOM ─────────────────────────────────────────────────────────
+const statPts     = document.getElementById('stat-pts');
+const statBoxes   = document.getElementById('stat-boxes');
+const statBest    = document.getElementById('stat-best');
+const statLegend  = document.getElementById('stat-legend');
+const streakEl    = document.getElementById('streak-count');
+const resultBox   = document.getElementById('result-box');
+const resultMsg   = document.getElementById('result-msg');
+const resultPts   = document.getElementById('result-pts');
+const openBtn     = document.getElementById('open-btn');
+const histEl      = document.getElementById('history');
+const boxSelector = document.getElementById('box-selector');
+const bigWin      = document.getElementById('big-win');
+const bigWinTitle = document.getElementById('big-win-title');
+const bigWinPts   = document.getElementById('big-win-pts');
+const bigWinEmoji = document.getElementById('big-win-emoji');
+const bigWinClose = document.getElementById('big-win-close');
+const unlockNotif = document.getElementById('unlock-notif');
+const unlockBody  = document.getElementById('unlock-body');
+const canvas      = document.getElementById('confetti-canvas');
+const ctx         = canvas.getContext('2d');
+
+// ─── BUILD BOX SELECTOR ──────────────────────────────────────────
+function buildSelector() {
+  boxSelector.innerHTML = '';
+  BOXES.forEach((b, i) => {
+    const stock = state.inv[i];
+    const hasStock = stock === Infinity || stock > 0;
+    const btn = document.createElement('button');
+    const isSelected = i === state.selectedBox;
+    btn.className = `box-opt ${b.cls}${isSelected ? ' active' : ''}${hasStock ? '' : ' locked'}`;
+
+    const stockLabel = stock === Infinity ? '∞' : `${stock}`;
+    const stockColor = stock === Infinity ? '' : stock === 0 ? 'color:#fc8181' : stock <= 2 ? 'color:#f6e05e' : '';
+    const dropLabel = b.dropChance > 0 ? `drop ${(b.dropChance*100).toFixed(1)}%` : 'sin drop';
+
+    btn.innerHTML = `${b.emoji} ${b.name}<span class="prob" style="${stockColor}">📦 ${stockLabel} &nbsp;·&nbsp; ${dropLabel}</span>`;
+
+    btn.addEventListener('click', () => {
+      resumeAC();
+      if (!hasStock) return;
+      state.selectedBox = i;
+      buildSelector();
+    });
+    boxSelector.appendChild(btn);
+  });
+  // Si la caja seleccionada se quedó sin stock, auto-seleccionar común
+  if (state.inv[state.selectedBox] === 0) {
+    state.selectedBox = 0;
+    buildSelector();
+  }
+}
+
+// ─── ROLL ────────────────────────────────────────────────────────
+// Retorna { pts, droppedBox: índice|null }
+function roll(boxIndex) {
+  const b = BOXES[boxIndex];
+  const pts = Math.floor(b.minPts + Math.random() * (b.maxPts - b.minPts + 1));
+  const droppedBox = (b.dropChance > 0 && Math.random() < b.dropChance) ? boxIndex + 1 : null;
+  return { pts, droppedBox };
+}
+
+// ─── OPEN ONE BOX ────────────────────────────────────────────────
+let opening = false;
+function openBox() {
+  if (opening) return;
+  resumeAC();
+  opening = true;
+
+  const bi = state.selectedBox;
+  const b  = BOXES[bi];
+
+  if (state.inv[bi] !== Infinity && state.inv[bi] <= 0) { opening = false; return; }
+  if (state.inv[bi] !== Infinity) state.inv[bi]--;
+
+  const { pts, droppedBox } = roll(bi);
+
+  // Si dropeó una caja, añadir al inventario
+  if (droppedBox !== null) state.inv[droppedBox]++;
+
+  state.points += pts;
+  state.boxes  += 1;
+  state.best    = Math.max(state.best, pts);
+  if (pts >= 10000) state.streak++; else state.streak = 0;
+  if (bi >= 3) state.legendaryCount++;
+
+  updateStats(pts);
+
+  // Mostrar resultado con info del drop
+  showResult(b, pts, false, 1, droppedBox);
+  b.sound();
+
+  if (droppedBox !== null) {
+    setTimeout(() => { BOXES[droppedBox].sound(); triggerConfetti(droppedBox >= 4 ? 2 : 1); }, 400);
+  }
+
+  const confettiLevel = pts >= 30000 ? 2 : pts >= 10000 ? 1 : 0;
+  if (confettiLevel > 0 && droppedBox === null) triggerConfetti(confettiLevel);
+
+  if (b.bigWin) setTimeout(() => showBigWin(b, pts), 500);
+
+  addHistory(b, pts, droppedBox);
+  spawnFloatNum(pts, b.cls);
+  buildSelector();
+  setTimeout(() => { opening = false; }, 300);
+}
+
+function openMulti(n) {
+  resumeAC();
+  const bi = state.selectedBox;
+  const b  = BOXES[bi];
+  const available = state.inv[bi] === Infinity ? n : Math.min(n, state.inv[bi]);
+  if (available <= 0) return;
+
+  let total = 0;
+  let dropsGained = {};
+  for (let i = 0; i < available; i++) {
+    if (state.inv[bi] !== Infinity) state.inv[bi]--;
+    const { pts, droppedBox } = roll(bi);
+    total += pts;
+    state.points += pts;
+    state.boxes  += 1;
+    state.best    = Math.max(state.best, pts);
+    if (pts >= 10000) state.streak++; else state.streak = 0;
+    if (bi >= 3) state.legendaryCount++;
+    if (droppedBox !== null) {
+      state.inv[droppedBox]++;
+      dropsGained[droppedBox] = (dropsGained[droppedBox] || 0) + 1;
+    }
+    addHistory(b, pts, droppedBox);
+  }
+
+  updateStats(total);
+  const dropKeys = Object.keys(dropsGained);
+  const dropSummary = dropKeys.length > 0
+    ? ' · ' + dropKeys.map(k => `${BOXES[k].emoji}x${dropsGained[k]}`).join(' ')
+    : '';
+  showResult(b, total, true, available, null, dropSummary);
+  b.sound();
+  if (total >= 10000) triggerConfetti(1);
+  spawnFloatNum(total, b.cls);
+  buildSelector();
+}
+
+function updateStats(lastPts) {
+  // Bump animation
+  [statPts, statBoxes, statBest, statLegend].forEach(el => {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+    setTimeout(() => el.classList.remove('bump'), 300);
+  });
+  statPts.textContent     = fmt(state.points);
+  statBoxes.textContent   = fmt(state.boxes);
+  statBest.textContent    = fmt(state.best);
+  statLegend.textContent  = state.legendaryCount;
+  streakEl.textContent    = state.streak;
+  updateMultiBtns();
+}
+
+function showResult(b, pts, multi=false, n=1, droppedBox=null, dropSummary='') {
+  resultBox.textContent = b.emoji;
+  resultBox.className   = 'shake';
+  setTimeout(() => resultBox.className = '', 500);
+
+  resultMsg.classList.remove('show');
+  resultPts.classList.remove('show');
+
+  let msg;
+  if (multi) {
+    msg = `x${n} → +${fmt(pts)} pts${dropSummary}`;
+  } else if (droppedBox !== null) {
+    msg = `¡DROP! ${BOXES[droppedBox].emoji} ${BOXES[droppedBox].name}`;
+  } else {
+    msg = b.messages[Math.floor(Math.random() * b.messages.length)];
+  }
+
+  setTimeout(() => {
+    resultMsg.textContent = msg;
+    resultMsg.style.color = droppedBox !== null
+      ? getComputedStyle(document.documentElement).getPropertyValue('--' + BOXES[droppedBox].tier)
+      : getComputedStyle(document.documentElement).getPropertyValue('--' + b.tier) || '#fff';
+    resultMsg.classList.add('show');
+    resultPts.textContent = multi ? '' : `+${fmt(pts)} puntos`;
+    resultPts.style.color = pts >= 5000 ? '#f6e05e' : '#fff';
+    resultPts.classList.add('show');
+  }, 100);
+
+  openBtn.classList.remove('exploding');
+  void openBtn.offsetWidth;
+  openBtn.classList.add('exploding');
+}
+
+// ─── UNLOCKS — ya no se usan, las cajas se obtienen por drop ─────
+function checkUnlocks() {}
+// ─── MULTI BTN STATE ─────────────────────────────────────────────
+function updateMultiBtns() {
+  document.querySelectorAll('.multi-btn').forEach(btn => {
+    const cost = +btn.dataset.cost;
+    btn.disabled = state.points < cost;
+  });
+}
+function showBigWin(b, pts) {
+  bigWinEmoji.textContent = b.emoji;
+  if (pts >= 1000000) {
+    bigWinTitle.textContent = '¡¡¡CAJA DEL SIGLO!!!';
+  } else if (pts >= 500000) {
+    bigWinTitle.textContent = '¡¡¡JACKPOT ABSOLUTO!!!';
+  } else {
+    bigWinTitle.textContent = '¡¡¡INCREÍBLE!!!';
+  }
+  bigWinPts.textContent = `+${fmt(pts)} PUNTOS`;
+  bigWin.classList.add('active');
+  triggerConfetti(3);
+}
+bigWinClose.addEventListener('click', () => bigWin.classList.remove('active'));
+
+// ─── HISTORY ─────────────────────────────────────────────────────
+function addHistory(b, pts, droppedBox=null) {
+  state.history.unshift({ b, pts, droppedBox });
+  if (state.history.length > 30) state.history.pop();
+  renderHistory();
+}
+function renderHistory() {
+  histEl.innerHTML = '';
+  state.history.slice(0, 20).forEach(h => {
+    const el = document.createElement('div');
+    el.className = 'hist-item';
+    el.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--'+h.b.tier);
+    el.textContent = h.droppedBox !== null
+      ? `${h.b.emoji}→${BOXES[h.droppedBox].emoji} +${fmt(h.pts)}`
+      : `${h.b.emoji} ${fmt(h.pts)}`;
+    histEl.appendChild(el);
+  });
+}
+
+// ─── FLOAT NUMBERS ───────────────────────────────────────────────
+function spawnFloatNum(pts, tier) {
+  const el = document.createElement('div');
+  el.className = 'float-num';
+  el.textContent = `+${fmt(pts)}`;
+  const x = openBtn.getBoundingClientRect();
+  el.style.left = (x.left + x.width/2 - 40 + (Math.random()-0.5)*60) + 'px';
+  el.style.top  = (x.top - 10) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+}
+
+// ─── CONFETTI ────────────────────────────────────────────────────
+canvas.width  = window.innerWidth;
+canvas.height = window.innerHeight;
+window.addEventListener('resize', () => { canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
+
+let confettiPieces = [];
+function triggerConfetti(level) {
+  const count = level === 3 ? 250 : level === 2 ? 120 : 60;
+  const colors = ['#f6e05e','#fc8181','#76e4f7','#9f7aea','#68d391','#f687b3','#fff'];
+  for (let i = 0; i < count; i++) {
+    confettiPieces.push({
+      x: Math.random() * canvas.width,
+      y: -10,
+      w: 6 + Math.random() * 10,
+      h: 4 + Math.random() * 6,
+      r: Math.random() * Math.PI * 2,
+      vx: (Math.random() - 0.5) * 8,
+      vy: 2 + Math.random() * 6,
+      vr: (Math.random() - 0.5) * 0.3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 1
+    });
+  }
+}
+let animFrame;
+function animateConfetti() {
+  if (confettiPieces.length === 0) { animFrame = requestAnimationFrame(animateConfetti); return; }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  confettiPieces = confettiPieces.filter(p => {
+    p.x  += p.vx;
+    p.y  += p.vy;
+    p.r  += p.vr;
+    p.vy += 0.1;
+    p.life -= 0.008;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.r);
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+    ctx.restore();
+    return p.y < canvas.height + 20 && p.life > 0;
+  });
+  animFrame = requestAnimationFrame(animateConfetti);
+}
+animateConfetti();
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+function fmt(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(2) + 'M';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'k';
+  return n.toLocaleString('es');
+}
+
+// ─── EVENTS ──────────────────────────────────────────────────────
+openBtn.addEventListener('click', () => openBox());
+document.querySelectorAll('.multi-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    const cost = +btn.dataset.cost;
+    if (state.points < cost) return;
+    state.points -= cost;
+    openMulti(+btn.dataset.n);
+  });
+});
+
+// ─── MULTI BTN STATE ─────────────────────────────────────────────
+function updateMultiBtns() {
+  document.querySelectorAll('.multi-btn').forEach(btn => {
+    const cost = +btn.dataset.cost;
+    btn.disabled = state.points < cost;
+  });
+}
+
+// ─── INIT ────────────────────────────────────────────────────────
+buildSelector();
+updateStats(0);
+updateMultiBtns();
+</script>
+</body>
+</html>
